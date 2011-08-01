@@ -38,6 +38,7 @@ YouTube = function(oauth) {
     'video_liked': localStorage['video_rated'],
     'video_commented': localStorage['video_commented']
   };
+  this.numNewItems_ = 0;
 };
 
 
@@ -60,6 +61,13 @@ YouTube.prototype.feedMap_;
 
 
 /**
+ * A list of all feed items.
+ * @type {Array.<Object>}
+ */
+YouTube.prototype.feedItems_;
+
+
+/**
  * The id of the interval used for polling.
  * @type {number}
  */
@@ -71,6 +79,20 @@ YouTube.prototype.pollingIntervalId_;
  * @type {Tab}
  */
 YouTube.prototype.videoTab_;
+
+
+/**
+ * Personalized user configs.
+ * @type {Object}
+ */
+YouTube.prototype.options_;
+
+
+/**
+ * The number of items since the last time the user accessed the extension.
+ * @type {number}
+ */
+YouTube.prototype.numNewItems_;
 
 
 /**
@@ -120,6 +142,13 @@ YouTube.MAX_NUM_FEED_ITEMS = 20;
  * @type {string}
  */
 YouTube.DOMAIN = 'youtube.com';
+
+
+/**
+ * Feature parameter for the extension. Used for analytics.
+ * @type {string}
+ */
+YouTube.FEATURE_YOUTUBE_FEED_CHROME_EXTENSION = 'ytfce';
 
 
 /**
@@ -183,16 +212,20 @@ YouTube.VIDEO_REL = 'http://gdata.youtube.com/schemas/2007#video';
  * Supported event types.
  * @type {Array.<String>}
  */
-YouTube.SUPPORTED_EVENT_TYPES = ['video_uploaded', 'video_favorited',
-                                 'video_rated', 'video_liked',
-                                 'video_commented'];
+YouTube.SUPPORTED_EVENT_TYPES = [
+    'video_uploaded',
+    'video_favorited',
+    'video_rated',
+    'video_liked',
+    'video_commented'
+];
 
 
 /**
  * Initializes a YouTube object.
  */
 YouTube.prototype.initialize = function() {
-  this.setVisualState_();
+  this.setVisualState();
   chrome.tabs.onRemoved.addListener(Util.bind(this.onTabRemoved_, this));
 };
 
@@ -219,7 +252,7 @@ YouTube.prototype.login = function() {
  */
 YouTube.prototype.logout = function() {
   this.oauth_.clearTokens();
-  this.setVisualState_();
+  this.setVisualState();
 };
 
 
@@ -238,6 +271,15 @@ YouTube.prototype.startPolling = function() {
 
 
 /**
+ * Resets the number of new items.
+ */
+YouTube.prototype.resetNumNewItems = function() {
+  this.numNewItems_ = 0;
+  this.setVisualState();
+};
+
+
+/**
  * Marks the feed item as removed and removes it from the feed array and map.
  * @param {string} feedItemId The id of the feed item whose video will be
  *     played.
@@ -249,7 +291,6 @@ YouTube.prototype.removeFeedEntry = function(feedItemId) {
     mapEntry['removed'] = true;
     delete mapEntry['item'];  // No need to keep the item anymore.
     localStorage['rm-' + feedItemId] = 'true';  // Persist in localStorage.
-    this.setVisualState_();
   }
 };
 
@@ -283,7 +324,7 @@ YouTube.prototype.buildFeedDom = function(feedEntryTemplate) {
       try {
         if (this.shouldShowFeedItem_(this.feedItems_[i], this.options_)) {
           var child = this.buildFeedItemElement_(feedEntryTemplate,
-              this.feedItems_[i]);
+                                                 this.feedItems_[i]);
           if (child) {
             div.appendChild(child);
             ++count;
@@ -363,7 +404,7 @@ YouTube.prototype.buildFeedItemElement_ = function(template, feedItem) {
                             videoInfo['author'][0]['name']['$t'];
 
   // Prepare the content for the basic DOM for the feed entry.
-  var userChannelUrl = YouTube.CHANNEL_PREFIX_URL + username;
+  var userChannelUrl = Util.channelUrl(username);
   var feedEntryTitle = chrome.i18n.getMessage('eventType_' + eventType,
                                               [userChannelUrl, username]);
 
@@ -380,10 +421,9 @@ YouTube.prototype.buildFeedItemElement_ = function(template, feedItem) {
 
   if (videoInfo) {
     // Prepare the content for the video info for the feed entry.
-    var videoUrl = YouTube.WATCH_VIDEO_PREFIX_URL + videoId;
-    var videoAuthorChannelUrl = YouTube.CHANNEL_PREFIX_URL + videoAuthorUsername;
-    var videoThumbnailSrc = YouTube.VIDEO_THUMBNAIL_PREFIX_URL + videoId +
-                            '/default.jpg';
+    var videoUrl = Util.videoWatchUrl(videoId);
+    var videoAuthorChannelUrl = Util.channelUrl(videoAuthorUsername);
+    var videoThumbnailSrc = Util.thumbnailUrl(videoId);
     var formattedViewCount = Util.formatViewCount(videoViewCount);
     var viewCountText = chrome.i18n.getMessage('viewCount',
                                                [formattedViewCount]);
@@ -421,7 +461,7 @@ YouTube.prototype.buildFeedItemElement_ = function(template, feedItem) {
  * Sets the objects visual state. 
  * @return
  */
-YouTube.prototype.setVisualState_ = function() {
+YouTube.prototype.setVisualState = function() {
   this.setIcon_();
   this.setBadgeText_();
 };
@@ -431,7 +471,7 @@ YouTube.prototype.setVisualState_ = function() {
  * Executed when a user has been authorized.
  */
 YouTube.prototype.onAuthorized_ = function() {
-  this.setVisualState_();
+  this.setVisualState();
   this.getTheFeed_();
 };
 
@@ -488,24 +528,12 @@ YouTube.prototype.onFeedReceived_ = function(text, xhr) {
           'item': feedItem,
           'removed': false
         };
+        ++this.numNewItems_;
       }
     }
     this.sortItems_();
     this.setBadgeText_();
   }
-};
-
-
-/**
- * Executed when the video metadata has been received from the GData server.
- * @param {Object} feedItem The feed item for which the video metadata is
- *     retrieved.
- * @param {string} text The parsed text from the xhr.
- * @param {XmlHttpRequest} xhr The XmlHttpRequest that finished executing.
- */
-YouTube.prototype.onVideoMetadataReceived_ = function(feedItem, text, xhr) {
-  var data = JSON.parse(text);
-  feedItem['videoInfo'] = data['entry'];
 };
 
 
@@ -525,16 +553,8 @@ YouTube.prototype.setIcon_ = function() {
  * Sets the proper badge text based on the state of the system.
  */
 YouTube.prototype.setBadgeText_ = function() {
-  if (this.oauth_.hasToken() && !!this.feedItems_.length) {
-    var count = 0;
-    for (var i = 0; i < this.feedItems_.length; ++i) {
-      if (this.shouldShowFeedItem_(this.feedItems_[i], this.options_)) {
-        ++count;
-      } else {
-      }
-    }
-    count = Math.min(count, this.options_['numFeedItems']);
-    chrome.browserAction.setBadgeText({'text': '' + count});
+  if (this.oauth_.hasToken() && this.numNewItems_ > 0) {
+    chrome.browserAction.setBadgeText({'text': '' + this.numNewItems_});
   } else {
     chrome.browserAction.setBadgeText({'text': ''});
   }
@@ -844,4 +864,36 @@ Util.formatTimeSince = function(timeString) {
     result = messageSingular;
   }
   return result;
+};
+
+
+/**
+ * Builds a video watch url given a video id.
+ * @param {string} videoId The id of the video.
+ * @return {string} The watch url for the video.
+ */
+Util.videoWatchUrl = function(videoId) {
+  return YouTube.WATCH_VIDEO_PREFIX_URL + videoId + '&feature=' +
+         YouTube.FEATURE_YOUTUBE_FEED_CHROME_EXTENSION;
+};
+
+
+/**
+ * Builds a channel url given a username.
+ * @param {string} username The username for the channel.
+ * @return {string} The channel url for that user's channel.
+ */
+Util.channelUrl = function(username) {
+  return YouTube.CHANNEL_PREFIX_URL + username + '?feature=' +
+         YouTube.FEATURE_YOUTUBE_FEED_CHROME_EXTENSION;
+};
+
+
+/**
+ * Builds a thumbnail url given a video.
+ * @param {string} videoId The id of the video.
+ * @return {string} The thumbnail url for the video.
+ */
+Util.thumbnailUrl = function(videoId) {
+  return YouTube.VIDEO_THUMBNAIL_PREFIX_URL + videoId + '/default.jpg';
 };
