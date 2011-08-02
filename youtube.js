@@ -28,15 +28,38 @@ YouTube = function(oauth) {
   this.feedMap_ = {};
   this.videoTab_ = null;
   this.options_ = {
-    'pollingInterval': localStorage['pollingInterval'] ||
+    'pollingInterval': localStorage['pollingInterval'] &&
+                       parseInt(localStorage['pollingInterval']) ||
                        YouTube.DEFAULT_POLLING_INTERVAL,
-    'numFeedItems': localStorage['numFeedItems'] ||
+    'numFeedItems': localStorage['numFeedItems'] &&
+                    parseInt(localStorage['numFeedItems']) ||
                     YouTube.DEFAULT_NUM_FEED_ITEMS,
-    'video_uploaded': localStorage['video_uploaded'],
-    'video_favorited': localStorage['video_favorited'],
-    'video_rated': localStorage['video_rated'],
-    'video_liked': localStorage['video_rated'],
-    'video_commented': localStorage['video_commented']
+    'numFeedItemsShown': localStorage['numFeedItemsShown'] &&
+                         parseInt(localStorage['numFeedItemsShown']) ||
+                         YouTube.DEFAULT_NUM_FEED_ITEMS_SHOWN,
+    'openInNewTab': localStorage['openInNewTab'] === 'true' || false,
+    'video_uploaded': localStorage['video_uploaded'] === undefined ||
+                      localStorage['video_uploaded'] === 'true' ||
+                      false,
+    'video_favorited': localStorage['video_favorited'] === undefined ||
+                       localStorage['video_favorited'] === 'true' ||
+                       false,
+    'video_rated': localStorage['video_rated'] === undefined ||
+                   localStorage['video_rated'] === 'true' ||
+                   false,
+    'video_liked': localStorage['video_rated'] === undefined ||
+                   localStorage['video_rated'] === 'true' ||
+                   false,
+    'video_commented': localStorage['video_commented'] === undefined ||
+                       localStorage['video_commented'] === 'true' ||
+                       false,
+    'load_friend_feed': localStorage['load_friend_feed'] === undefined ||
+                        localStorage['load_friend_feed'] === 'true' ||
+                        false,
+    'load_subscription_feed':
+        localStorage['load_subscription_feed'] === undefined ||
+        localStorage['load_subscription_feed'] === 'true' ||
+        false
   };
   this.numNewItems_ = 0;
 };
@@ -131,10 +154,24 @@ YouTube.DEFAULT_NUM_FEED_ITEMS = 10;
 
 
 /**
+ * The default number of feed items to be shown.
+ * @type {number}
+ */
+YouTube.DEFAULT_NUM_FEED_ITEMS_SHOWN = 20;
+
+
+/**
  * The maximum number of feed items to be retrieved.
  * @type {number}
  */
 YouTube.MAX_NUM_FEED_ITEMS = 20;
+
+
+/**
+ * The maximum number of feed items to be shown.
+ * @type {number}
+ */
+YouTube.MAX_NUM_FEED_ITEMS_SHOWN = 50;
 
 
 /**
@@ -319,7 +356,7 @@ YouTube.prototype.buildFeedDom = function(feedEntryTemplate) {
   var div = document.createElement('div');
   if (!!this.feedItems_.length) {
     var count = 0;
-    var maxItemsToShow = this.options_['numFeedItems'];
+    var maxItemsToShow = this.options_['numFeedItemsShown'];
     for (var i = 0; i < this.feedItems_.length; ++i) {
       try {
         if (this.shouldShowFeedItem_(this.feedItems_[i], this.options_)) {
@@ -481,30 +518,34 @@ YouTube.prototype.onAuthorized_ = function() {
  */
 YouTube.prototype.getTheFeed_ = function() {
   if (this.oauth_.hasToken()) {
-    this.oauth_.sendSignedRequest(YouTube.GDATA_FRIEND_FEED_URL,
-        Util.bind(this.onFeedReceived_, this) , {
-          'parameters' : {
-            'alt': 'json',
-            'max-results' : this.options_['numFeedItems'],
-            'v' : 2,
-            'inline': true
-          },
-          'headers' : {
-            'X-GData-Key': 'key=' + YouTube.YOUTUBE_API_KEY
-          }
-    });
-    this.oauth_.sendSignedRequest(YouTube.GDATA_SUBSCRIPTION_FEED_URL,
-        Util.bind(this.onFeedReceived_, this) , {
-          'parameters' : {
-            'alt': 'json',
-            'max-results' : this.options_['numFeedItems'],
-            'v' : 2,
-            'inline': true
-          },
-          'headers' : {
-            'X-GData-Key': 'key=' + YouTube.YOUTUBE_API_KEY
-          }
-    });
+    if (this.options_['load_friend_feed']) {
+      this.oauth_.sendSignedRequest(YouTube.GDATA_FRIEND_FEED_URL,
+          Util.bind(this.onFeedReceived_, this) , {
+            'parameters' : {
+              'alt': 'json',
+              'max-results' : this.options_['numFeedItems'],
+              'v' : 2,
+              'inline': true
+            },
+            'headers' : {
+              'X-GData-Key': 'key=' + YouTube.YOUTUBE_API_KEY
+            }
+      });
+    }
+    if (this.options_['load_subscription_feed']) {
+      this.oauth_.sendSignedRequest(YouTube.GDATA_SUBSCRIPTION_FEED_URL,
+          Util.bind(this.onFeedReceived_, this) , {
+            'parameters' : {
+              'alt': 'json',
+              'max-results' : this.options_['numFeedItems'],
+              'v' : 2,
+              'inline': true
+            },
+            'headers' : {
+              'X-GData-Key': 'key=' + YouTube.YOUTUBE_API_KEY
+            }
+      });
+    }
   }
 };
 
@@ -562,15 +603,19 @@ YouTube.prototype.setBadgeText_ = function() {
 
 
 /**
- * Opens the given url in a new tab.
+ * Opens the given url in a tab. Depending on user's preferences, it might reuse
+ * the previously opened tab.
  * @param {string} url The url of the page.
  */
-YouTube.prototype.openInNewTab = function(url) {
+YouTube.prototype.openInTab = function(url) {
   if (this.videoTab_) {
     chrome.tabs.update(this.videoTab_.id, {'url': url, 'selected': true});
   } else {
     chrome.tabs.create({'url': url}, Util.bind(function(tab) {
-      this.videoTab_ = tab;
+      if (!this.options_['openInNewTab']) {
+        // Save a reference and reuse the tab next time.
+        this.videoTab_ = tab;
+      }
     }, this));
   }
 };
@@ -618,7 +663,7 @@ YouTube.prototype.shouldShowFeedItem_ = function(feedItem, prefs) {
   if (YouTube.SUPPORTED_EVENT_TYPES.indexOf(eventType) == -1) {
     return false;
   }
-  return (prefs[eventType] === 'true') || (prefs[eventType] == undefined);
+  return prefs[eventType];
 };
 
 

@@ -44,7 +44,7 @@
         var labelMetricPollingInterval = Util.getFirstElementByClass(optionPollingInterval, 'optionLabelMetric');
         labelMetricPollingInterval.innerHTML = chrome.i18n.getMessage('labelMinutes');
 
-        // Number of feed items
+        // Number of feed items retrieved.
         var optionNumFeedItems = document.getElementById('option_num_feed_items');
         var labelNumFeedItems = Util.getFirstElementByClass(optionNumFeedItems, 'optionLabel');
         labelNumFeedItems.innerHTML = chrome.i18n.getMessage('labelNumFeedItems');
@@ -57,17 +57,50 @@
         }
         selectNumFeedItems.value = options['numFeedItems'];
 
+        // Number of feed items shown.
+        var optionNumFeedItemsShown = document.getElementById('option_num_feed_items_shown');
+        var labelNumFeedItemsShown = Util.getFirstElementByClass(optionNumFeedItemsShown, 'optionLabel');
+        labelNumFeedItemsShown.innerHTML = chrome.i18n.getMessage('labelNumFeedItemsShown');
+        var selectNumFeedItemsShown = Util.getFirstElementByClass(optionNumFeedItemsShown, 'optionSelect');
+        for (var i = 1; i <= YouTube.MAX_NUM_FEED_ITEMS_SHOWN; ++i) {
+          var option = document.createElement('option');
+          option.value = i;
+          option.text = i;
+          selectNumFeedItemsShown.appendChild(option);
+        }
+        selectNumFeedItemsShown.value = options['numFeedItemsShown'];
+
+        var openInNewTab = document.getElementById('option_open_in_new_tab');
+        var openInNewTabCheckbox = Util.getFirstElementByClass(openInNewTab, 'optionCheckbox');
+        var labelOpenInNewTab = Util.getFirstElementByClass(openInNewTab, 'optionLabel');
+        labelOpenInNewTab.innerHTML = chrome.i18n.getMessage('labelOpenInNewTab');
+        if (options['openInNewTab']) {
+          openInNewTabCheckbox.checked = true;
+        }
+
+        var titleWhichFeedTypes = document.getElementById('title_which_feed_types');
+        titleWhichFeedTypes.innerHTML = chrome.i18n.getMessage('titleWhichFeedTypes');
+        var feedTypes = ['load_friend_feed', 'load_subscription_feed'];
+        for (var i = 0; i < feedTypes.length; ++i) {
+          var feedType = feedTypes[i];
+          var optionDiv = document.getElementById('option_' + feedType);
+          var label = Util.getFirstElementByClass(optionDiv, 'optionLabel');
+          label.innerHTML = chrome.i18n.getMessage('label_' + feedType);
+          if (options[feedType]) {
+            var checkboxFeedType = Util.getFirstElementByClass(optionDiv, 'optionCheckbox');
+            checkboxFeedType.checked = true;
+          }
+        }
+
         var titleWhichEventTypes = document.getElementById('title_which_event_types');
         titleWhichEventTypes.innerHTML = chrome.i18n.getMessage('titleWhichEventTypes');
-
         var eventTypes = ['video_uploaded', 'video_favorited', 'video_liked', 'video_rated', 'video_commented'];
-
         for (var i = 0; i < eventTypes.length; ++i) {
           var eventType = eventTypes[i];
           var optionDiv = document.getElementById('option_' + eventType);
           var label = Util.getFirstElementByClass(optionDiv, 'optionLabel');
           label.innerHTML = chrome.i18n.getMessage('label_' + eventType);
-          if ((options[eventType] === 'true') || (options[eventType] == undefined)) {
+          if (options[eventType]) {
             var checkboxEventType = Util.getFirstElementByClass(optionDiv, 'optionCheckbox');
             checkboxEventType.checked = true;
           }
@@ -98,24 +131,51 @@
                 placeholders));
             return;
           }
+          if (selectNumFeedItemsShown <= 0 &&
+              selectNumFeedItemsShown.value > YouTube.MAX_NUM_FEED_ITEMS_SHOWN) {
+            var placeholders = [
+              chrome.i18n.getMessage('labelNumFeedItemsShown'),
+              1, YouTube.MAX_NUM_FEED_ITEMS_SHOWN
+            ];
+            setMessage('errorMessage',
+                chrome.i18n.getMessage('errorInvalidOptionValue',
+                placeholders));
+            return;
+          }
           setMessage('successMessage', chrome.i18n.getMessage('messageSavedOptions'));
 
           var newOptions = {
-              'pollingInterval': selectPollingInterval.value,
-              'numFeedItems': selectNumFeedItems.value
+              'pollingInterval': parseInt(selectPollingInterval.value),
+              'numFeedItems': parseInt(selectNumFeedItems.value),
+              'numFeedItemsShown': parseInt(selectNumFeedItemsShown.value),
           };
 
-          var eventTypes = ['video_uploaded', 'video_favorited', 'video_liked', 'video_rated', 'video_commented'];
+          for (var i = 0; i < feedTypes.length; ++i) {
+            var feedType = feedTypes[i];
+            var optionDiv = document.getElementById('option_' + feedType);
+            var checkboxFeedType = Util.getFirstElementByClass(optionDiv, 'optionCheckbox');
+            if (checkboxFeedType.checked) {
+              newOptions[feedType] = true;
+            } else {
+              newOptions[feedType] = false;
+            }
+          }
 
           for (var i = 0; i < eventTypes.length; ++i) {
             var eventType = eventTypes[i];
             var optionDiv = document.getElementById('option_' + eventType);
             var checkboxEventType = Util.getFirstElementByClass(optionDiv, 'optionCheckbox');
             if (checkboxEventType.checked) {
-              newOptions[eventType] = 'true';
+              newOptions[eventType] = true;
             } else {
-              newOptions[eventType] = 'false';
+              newOptions[eventType] = false;
             }
+          }
+
+          if (openInNewTabCheckbox.checked) {
+            newOptions['openInNewTab'] = true;
+          } else {
+            newOptions['openInNewTab'] = false;
           }
 
           youtube.saveOptions(newOptions);
@@ -155,6 +215,25 @@
         <div id='option_num_feed_items' class='optionDiv'>
           <label class='optionLabel'></label>
           <select class='optionSelect'></select>
+        </div>
+        <div id='option_num_feed_items_shown' class='optionDiv'>
+          <label class='optionLabel'></label>
+          <select class='optionSelect'></select>
+        </div>
+        <div id='option_open_in_new_tab' class='optionDiv'>
+          <label class='optionLabel'></label>
+          <input type='checkbox' class='optionCheckbox'>
+        </div>
+      </div>
+      <div id='feed_types'>
+        <p id='title_which_feed_types'></p>
+        <div id='option_load_friend_feed' class='feedTypeDiv'>
+          <label class='optionLabel'></label>
+          <input type='checkbox' class='optionCheckbox'>
+        </div>
+        <div id='option_load_subscription_feed' class='feedTypeDiv'>
+          <label class='optionLabel'></label>
+          <input type='checkbox' class='optionCheckbox'>
         </div>
       </div>
       <div id='event_types'>

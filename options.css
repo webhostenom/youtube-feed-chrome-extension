@@ -34,7 +34,7 @@ div.main {
   border-width: 5px;
 }
 
-div.optionDiv, div.eventTypeDiv {
+div.optionDiv, div.eventTypeDiv, div.feedTypeDiv {
   margin: 10px 0px;
 }
 
@@ -60,10 +60,10 @@ label.optionLabel {
   background-color: #FFE5E5;
 }
 
-#event_types {
+#event_types, #feed_types {
   margin: 20px 0px;
 }
 
-#event_types div{
+#event_types div, #feed_types div {
   margin-left: 20px;'
 }
