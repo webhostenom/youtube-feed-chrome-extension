@@ -129,14 +129,14 @@ YouTube.YOUTUBE_API_KEY = 'AI39si4g_K8MuDv5EAPaHO_ylcr7S9J8BqKfqueLVnpftP6Iq7agZ
  * The polling interval for feed items in minutes.
  * @type {number}
  */
-YouTube.DEFAULT_POLLING_INTERVAL = 30;  // 30 minutes.
+YouTube.DEFAULT_POLLING_INTERVAL = 5;  // 5 minutes.
 
 
 /**
  * The minimum polling interval for feed items in minutes.
  * @type {number}
  */
-YouTube.MIN_POLLING_INTERVAL = 10;  // 10 minutes.
+YouTube.MIN_POLLING_INTERVAL = 1;  // 1 minute.
 
 
 /**
@@ -557,6 +557,7 @@ YouTube.prototype.getTheFeed_ = function() {
  */
 YouTube.prototype.onFeedReceived_ = function(text, xhr) {
   var data = JSON.parse(text);
+  console.log(text);
 
   if (data && data['feed'] && data['feed']['entry']) {
     var feedItems = data['feed']['entry'];
@@ -569,7 +570,9 @@ YouTube.prototype.onFeedReceived_ = function(text, xhr) {
           'item': feedItem,
           'removed': false
         };
-        ++this.numNewItems_;
+        if (this.shouldShowFeedItem_(feedItem, this.options_)) {
+          ++this.numNewItems_;
+        }
       }
     }
     this.sortItems_();

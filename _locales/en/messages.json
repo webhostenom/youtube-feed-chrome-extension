@@ -64,7 +64,7 @@
     "description": "The label for the checkbox for commented videos."
   },
   "label_load_friend_feed": {
-    "message": "Videos from friends",
+    "message": "Videos from Friends",
     "description": "The label for the checkbox for whether to load videos from friends."
   },
   "label_load_subscription_feed": {
@@ -267,14 +267,6 @@
   },
   "labelOpenInNewTab": {
     "message": "Open each video in its own tab",
-    "description": "The label for an option field."
-  },
-  "labelLoadFriendFeeds": {
-    "message": "Load videos from Friends",
-    "description": "The label for an option field."
-  },
-  "labelLoadSubscriptionFeeds": {
-    "message": "Load videos from subscriptions",
     "description": "The label for an option field."
   },
   "errorInvalidOptionValue": {
