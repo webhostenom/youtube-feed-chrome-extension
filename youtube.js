@@ -338,6 +338,7 @@ YouTube.prototype.removeFeedEntry = function(feedItemId) {
     delete mapEntry['item'];  // No need to keep the item anymore.
     localStorage['rm-' + feedItemId] = 'true';  // Persist in localStorage.
   }
+  this.setBadgeText_();
 };
 
 

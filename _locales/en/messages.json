@@ -265,6 +265,18 @@
     "message": "Number of feed items to show",
     "description": "The label for an option field."
   },
+  "labelUnreadCount": {
+    "message": "Unread count represents",
+    "description": "The label for an option field."
+  },
+  "labelUnreadCountOnlyNew": {
+    "message": "New videos",
+    "description": "The value for an option field."
+  },
+  "labelUnreadCountEverything": {
+    "message": "All videos",
+    "description": "The value for an option field."
+  },
   "labelOpenInNewTab": {
     "message": "Open each video in its own tab",
     "description": "The label for an option field."
