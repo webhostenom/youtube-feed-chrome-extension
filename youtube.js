@@ -37,6 +37,8 @@ YouTube = function(oauth) {
     'numFeedItemsShown': localStorage['numFeedItemsShown'] &&
                          parseInt(localStorage['numFeedItemsShown']) ||
                          YouTube.DEFAULT_NUM_FEED_ITEMS_SHOWN,
+    'unreadCount': localStorage['unreadCount'] ||
+                   YouTube.DEFAULT_UNREAD_COUNT_VALUE,
     'openInNewTab': localStorage['openInNewTab'] === 'true' || false,
     'video_uploaded': localStorage['video_uploaded'] === undefined ||
                       localStorage['video_uploaded'] === 'true' ||
@@ -158,6 +160,13 @@ YouTube.DEFAULT_NUM_FEED_ITEMS = 10;
  * @type {number}
  */
 YouTube.DEFAULT_NUM_FEED_ITEMS_SHOWN = 20;
+
+
+/**
+ * The default behavior of the unread count. Count new videos only.
+ * @type {number}
+ */
+YouTube.DEFAULT_UNREAD_COUNT_VALUE = 'only_new';
 
 
 /**
@@ -495,13 +504,21 @@ YouTube.prototype.buildFeedItemElement_ = function(template, feedItem) {
 
 
 /**
- * Sets the objects visual state. 
- * @return
+ * Sets the objects visual state.
  */
 YouTube.prototype.setVisualState = function() {
   this.setIcon_();
   this.setBadgeText_();
 };
+
+
+/**
+ * Whether to count only new videos in the unread count.
+ * @return {boolean} Whether to count only new videos in the unread count.
+ */
+YouTube.prototype.countNewVideosOnly_ = function() {
+  return this.options_['unreadCount'] == 'only_new';
+}
 
 
 /**
@@ -597,8 +614,21 @@ YouTube.prototype.setIcon_ = function() {
  * Sets the proper badge text based on the state of the system.
  */
 YouTube.prototype.setBadgeText_ = function() {
-  if (this.oauth_.hasToken() && this.numNewItems_ > 0) {
-    chrome.browserAction.setBadgeText({'text': '' + this.numNewItems_});
+  if (this.oauth_.hasToken()) {
+    var count = this.numNewItems_;
+    if (!this.countNewVideosOnly_()) {
+      // Count everything we have. Old-style.
+      count = 0;
+      for (var i = 0; i < this.feedItems_.length; ++i) {
+        if (this.shouldShowFeedItem_(this.feedItems_[i], this.options_)) {
+          ++count;
+        }
+      }
+      // No point in showing a count larger than the number of videos we show.
+      count = Math.min(count, this.options_['numFeedItemsShown']);
+    }
+    var displayedCount = count || '';
+    chrome.browserAction.setBadgeText({'text': '' + displayedCount});
   } else {
     chrome.browserAction.setBadgeText({'text': ''});
   }

@@ -70,6 +70,21 @@
         }
         selectNumFeedItemsShown.value = options['numFeedItemsShown'];
 
+        // What does the unread count represent. New items or total unread items?
+        var optionUnreadCount = document.getElementById('option_unread_count');
+        var labelUnreadCount = Util.getFirstElementByClass(optionUnreadCount, 'optionLabel');
+        labelUnreadCount.innerHTML = chrome.i18n.getMessage('labelUnreadCount');
+        var selectUnreadCount = Util.getFirstElementByClass(optionUnreadCount, 'optionSelect');
+        var optionOnlyNew = document.createElement('option');
+        optionOnlyNew.value = 'only_new';
+        optionOnlyNew.text = chrome.i18n.getMessage('labelUnreadCountOnlyNew');
+        var optionEverything = document.createElement('option');
+        optionEverything.value = 'everything';
+        optionEverything.text = chrome.i18n.getMessage('labelUnreadCountEverything');
+        selectUnreadCount.appendChild(optionOnlyNew);
+        selectUnreadCount.appendChild(optionEverything);
+        selectUnreadCount.value = options['unreadCount'];
+
         var openInNewTab = document.getElementById('option_open_in_new_tab');
         var openInNewTabCheckbox = Util.getFirstElementByClass(openInNewTab, 'optionCheckbox');
         var labelOpenInNewTab = Util.getFirstElementByClass(openInNewTab, 'optionLabel');
@@ -142,12 +157,28 @@
                 placeholders));
             return;
           }
+          var validUnreadCountValues = {
+            'only_new': true,
+            'everything': true,
+          }
+          if (!validUnreadCountValues[selectUnreadCount.value]) {
+            var placeholders = [
+              chrome.i18n.getMessage('labelUnredCount'),
+              chrome.i18n.getMessage('labelUnreadCountOnlyNew'),
+              chrome.i18n.getMessage('labelUnreadCountEverything')
+            ];
+            setMessage('errorMessage',
+                chrome.i18n.getMessage('errorInvalidOptionValue',
+                placeholders));
+            return;
+          }
           setMessage('successMessage', chrome.i18n.getMessage('messageSavedOptions'));
 
           var newOptions = {
               'pollingInterval': parseInt(selectPollingInterval.value),
               'numFeedItems': parseInt(selectNumFeedItems.value),
               'numFeedItemsShown': parseInt(selectNumFeedItemsShown.value),
+              'unreadCount': selectUnreadCount.value,
           };
 
           for (var i = 0; i < feedTypes.length; ++i) {
@@ -180,6 +211,7 @@
 
           youtube.saveOptions(newOptions);
           youtube.startPolling();
+          youtube.setVisualState();
         });
       }
 
@@ -219,6 +251,10 @@
           <select class='optionSelect'></select>
         </div>
         <div id='option_num_feed_items_shown' class='optionDiv'>
+          <label class='optionLabel'></label>
+          <select class='optionSelect'></select>
+        </div>
+        <div id='option_unread_count' class='optionDiv'>
           <label class='optionLabel'></label>
           <select class='optionSelect'></select>
         </div>
