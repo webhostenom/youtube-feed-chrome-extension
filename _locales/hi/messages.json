@@ -170,7 +170,7 @@
     "description": "Timestamp singular - 1 second since an event."
   },
   "yearsAgo": {
-    "message": "$गिनती$ वर्ष पहले",
+    "message": "$count$ वर्ष पहले",
     "description": "Timestamp plural - years since an event.",
     "placeholders": {
       "count": {
@@ -180,7 +180,7 @@
     }
   },
   "monthsAgo": {
-    "message": "$गिनती$ महीने पहले",
+    "message": "$count$ महीने पहले",
     "description": "Timestamp plural - months since an event.",
     "placeholders": {
       "count": {
@@ -190,7 +190,7 @@
     }
   },
   "weeksAgo": {
-    "message": "$गिनती$ सप्ताह पहले",
+    "message": "$count$ सप्ताह पहले",
     "description": "Timestamp plural - weeks since an event.",
     "placeholders": {
       "count": {
@@ -200,7 +200,7 @@
     }
   },
   "daysAgo": {
-    "message": "$गिनती$ दिन पहले",
+    "message": "$count$ दिन पहले",
     "description": "Timestamp plural - days since an event.",
     "placeholders": {
       "count": {
@@ -210,7 +210,7 @@
     }
   },
   "hoursAgo": {
-    "message": "$गिनती$ घंटा पहले",
+    "message": "$count$ घंटा पहले",
     "description": "Timestamp plural - hours since an event.",
     "placeholders": {
       "count": {
@@ -220,7 +220,7 @@
     }
   },
   "minutesAgo": {
-    "message": "$गिनती$ मिनट पहले",
+    "message": "$count$ मिनट पहले",
     "description": "Timestamp plural - minutes since an event.",
     "placeholders": {
       "count": {
@@ -230,7 +230,7 @@
     }
   },
   "secondsAgo": {
-    "message": "$गिनती$ सेकंड पहले",
+    "message": "$count$ सेकंड पहले",
     "description": "Timestamp plural - seconds since an event.",
     "placeholders": {
       "count": {
@@ -240,7 +240,7 @@
     }
   },
   "viewCount": {
-    "message": "$गिनती$ बार देखा गया",
+    "message": "$count$ बार देखा गया",
     "description": "The number of views for a video.",
     "placeholders": {
       "count": {
