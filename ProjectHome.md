@@ -1,0 +1,3 @@
+This extension notifies the user whenever new videos are available in his YouTube Homepage Feed. These are videos that their friends uploaded, favorited, liked, commented on, etc.
+
+The user should consider installing this extension if he has YouTube friends or subscriptions which are good content creators and/or curators and want to receive an instant notification whenever new content is available.
